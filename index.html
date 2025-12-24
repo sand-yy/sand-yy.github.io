@@ -37,8 +37,6 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: false });
         document.body.appendChild(renderer.domElement);
-
-        // Ambient light must be very low to see the point lights
         const ambient = new THREE.AmbientLight(0xffffff, 0.02); 
         scene.add(ambient);
 
@@ -53,7 +51,6 @@
         const pLight = new THREE.PointLight(0x00ff00, 20, 15);
         scene.add(pLight);
 
-        // Floor - Adjusted for better light response
         const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(100, 2000),
             new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0 })
@@ -107,9 +104,7 @@
             );
             group.add(mesh);
 
-            // Lighting for bars
             if(isLong) {
-                // Front and Back lights to illuminate the ground
                 const lFront = new THREE.PointLight(color, 40, 15);
                 lFront.position.set(0, 0, 1.5);
                 const lBack = new THREE.PointLight(color, 40, 15);
@@ -138,7 +133,7 @@
                     if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; }
                 }
                 pLight.position.copy(player.position);
-                pLight.position.y += 1; // Raise light slightly for better floor spread
+                pLight.position.y += 1;
 
                 spawnTimer++;
                 if (spawnTimer > 70) { spawnObstacle(); spawnTimer = 0; }
@@ -170,7 +165,7 @@
                         p.userData.velocity.y += gravity; 
                     } else { 
                         p.position.y = 0.05; 
-                        p.userData.velocity.y *= -0.4; // Bounce
+                        p.userData.velocity.y *= -0.4;
                         p.userData.velocity.x *= 0.7;
                         p.userData.velocity.z *= 0.7;
                     }
