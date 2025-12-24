@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Safe Summon</title>
+    <title>Pixel Runner - Fair Spacing</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
@@ -66,6 +66,11 @@
         let score = 0, obstacles = [], particles = [], bossProjectiles = [], playerBullets = [], speed = 0.35;
         let gameOver = false, isJumping = false, velocityY = 0, bossActive = false, bossObj = null, laughTimer = 0, bossHP = 1225;
         let bossIntroState = 0, introTime = 0, worldShake = 0, isDesperate = false;
+        
+        // --- NEW SPAWN CONTROL ---
+        let spawnCooldown = 0; 
+        const MIN_SPAWN_GAP = 50; // Minimum frames between spawns
+
         const gravity = -0.016, jumpPower = 0.3;
 
         const keys = { Left: false, Right: false, Z: false };
@@ -84,10 +89,10 @@
 
         function triggerBoss(brick) {
             scene.remove(brick.mesh);
-            obstacles = []; // Kill all other bricks immediately
+            obstacles.forEach(o => scene.remove(o.mesh));
+            obstacles = [];
             bossActive = true; bossIntroState = 1; introTime = 0;
             audios.bgm.pause(); audios.bgm.currentTime = 0;
-            
             bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true, opacity: 0 }));
             bossObj.scale.set(8, 8, 1);
             bossObj.position.set(0, 5, player.position.z - 60);
@@ -143,7 +148,11 @@
                 }
                 if(shootCooldown > 0) shootCooldown--;
 
-                if(!bossActive) { if(Math.random() < 0.015) spawnObstacle(); }
+                // --- MANAGED SPAWNING ---
+                if(!bossActive) { 
+                    if(spawnCooldown > 0) spawnCooldown--;
+                    else if(Math.random() < 0.03) spawnObstacle(); 
+                }
                 else if(bossObj) {
                     if(bossIntroState === 1) { 
                         introTime++; bossObj.material.opacity = Math.min(1, bossObj.material.opacity + 0.02);
@@ -190,7 +199,6 @@
                     const dx = Math.abs(player.position.x - obj.mesh.position.x);
                     const dz = Math.abs(player.position.z - obj.mesh.position.z);
                     if (dx < (obj.width/2) + 0.5 && player.position.y < 1.6 && dz < 1.2) {
-                        // CRITICAL FIX: Explicitly check special flag
                         if(obj.special) { triggerBoss(obj); obstacles.splice(i, 1); } 
                         else { endGame(); }
                     }
@@ -209,13 +217,18 @@
         function spawnObstacle() {
             if (gameOver || bossActive) return;
             const isSpecial = Math.random() < 0.1;
-            const width = isSpecial ? 2 : (Math.random() < 0.4 ? TRACK_WIDTH : 6);
+            const isJumpBar = Math.random() < 0.4;
+            const width = isSpecial ? 2 : (isJumpBar ? TRACK_WIDTH : 6);
             const col = isSpecial ? 0xff00ff : 0xff0000;
+            
             const group = new THREE.Group();
             group.add(new THREE.Mesh(new THREE.BoxGeometry(width, 1, 1), new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 2 })));
             group.position.set(width > 10 ? 0 : (Math.random()-0.5)*(TRACK_WIDTH-6), 0.5, -120);
             scene.add(group);
             obstacles.push({ mesh: group, width: width, special: isSpecial });
+            
+            // Set cooldown based on how big the obstacle was
+            spawnCooldown = isJumpBar ? MIN_SPAWN_GAP + 20 : MIN_SPAWN_GAP;
         }
 
         function endGame() { if(gameOver) return; gameOver = true; audios.bgm.pause(); audios.bossBgm.pause(); audios.death.play(); document.getElementById('msg').style.display = 'block'; }
