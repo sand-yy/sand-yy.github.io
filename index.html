@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Fixed Summon</title>
+    <title>Pixel Runner - Lockdown</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
@@ -10,13 +10,14 @@
         #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; z-index: 11; }
         #boss-ui { position: absolute; top: 20px; right: 20px; color: #f0f; font-size: 24px; display: none; z-index: 11; }
         #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: none; background: #000; padding: 30px; border: 1px solid #f0f; z-index: 12; }
-        button { background: #440044; color: #f0f; border: 1px solid #f0f; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #shoot-warning { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); color: #f00; font-weight: bold; display: none; z-index: 11; }
     </style>
 </head>
 <body>
     <div id="crt-overlay"></div>
     <div id="ui">Score: 0</div>
     <div id="boss-ui">BOSS HP: 1225</div>
+    <div id="shoot-warning">STATIONARY FIRE ACTIVE</div>
     <div id="msg"><h1 id="status">CONNECTION TERMINATED</h1><button onclick="window.location.reload()">RE-LINK</button></div>
 
     <audio id="bgm" loop src="https://github.com/sand-yy/sand-yy.github.io/raw/refs/heads/main/Air%20Waves.mp3"></audio>
@@ -74,7 +75,8 @@
             if (e.key === 'ArrowLeft') keys.Left = true;
             if (e.key === 'ArrowRight') keys.Right = true;
             if (e.key.toLowerCase() === 'z') keys.Z = true;
-            if (e.key === 'ArrowUp' && !isJumping && !gameOver) { velocityY = jumpPower; isJumping = true; }
+            // Only jump if NOT shooting
+            if (e.key === 'ArrowUp' && !isJumping && !gameOver && !keys.Z) { velocityY = jumpPower; isJumping = true; }
         });
         window.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft') keys.Left = false;
@@ -83,38 +85,37 @@
         });
 
         function triggerBoss(brick) {
-            invulnerable = true; // Temporary god mode so you don't die on the brick
+            invulnerable = true;
             scene.remove(brick.mesh);
-            obstacles = []; // Wipe everything immediately
-            
-            bossActive = true; 
-            bossIntroState = 1; 
-            introTime = 0;
-            
+            obstacles.forEach(o => scene.remove(o.mesh));
+            obstacles = [];
+            bossActive = true; bossIntroState = 1; introTime = 0;
             audios.bgm.pause(); audios.bgm.currentTime = 0;
-            
             bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true, opacity: 0 }));
             bossObj.scale.set(8, 8, 1);
-            bossObj.position.set(0, 5, player.position.z - 60); // Spawn further away
+            bossObj.position.set(0, 5, player.position.z - 60);
             scene.add(bossObj);
-
-            setTimeout(() => { invulnerable = false; }, 500); // God mode off once sequence starts
+            setTimeout(() => { invulnerable = false; }, 800);
         }
 
         function spawnBossAttack() {
             const pX = player.position.x;
             const col = isDesperate ? 0xff0000 : 0xff00ff;
+            
+            // LETHAL RAIN: Spawns directly on and around player
             for(let i=-1; i<=1; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshLambertMaterial({color: col, emissive: col}));
-                p.position.set(pX + (i*4), 15, player.position.z - 40);
-                p.userData.velocity = new THREE.Vector3(0, -0.28, 0.25);
+                const p = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshLambertMaterial({color: col, emissive: col}));
+                p.position.set(pX + (i*2.5), 20, player.position.z - 45);
+                p.userData.velocity = new THREE.Vector3(0, -0.35, 0.35); // Faster fall
                 scene.add(p);
                 bossProjectiles.push(p);
             }
-            const proj = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshLambertMaterial({color: 0xffff00, emissive: 0xffff00}));
+
+            // AIMBOT SNIPER: Targets current player center
+            const proj = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshLambertMaterial({color: 0xffff00, emissive: 0xffff00}));
             proj.position.copy(bossObj.position);
             const dir = new THREE.Vector3().subVectors(player.position, bossObj.position).normalize();
-            proj.userData.velocity = dir.multiplyScalar(0.32);
+            proj.userData.velocity = dir.multiplyScalar(0.4); // High velocity
             scene.add(proj);
             bossProjectiles.push(proj);
         }
@@ -123,24 +124,36 @@
         function animate() {
             requestAnimationFrame(animate);
             if (!gameOver) {
-                const limit = (TRACK_WIDTH/2) - 0.5;
-                if (keys.Left && player.position.x > -limit) player.position.x -= 0.25;
-                if (keys.Right && player.position.x < limit) player.position.x += 0.25;
-                if (isJumping) { player.position.y += velocityY; velocityY += gravity; if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; } }
+                // RESTRICTED MOVEMENT: No moving or jumping while Z is held
+                const isShooting = keys.Z;
+                document.getElementById('shoot-warning').style.display = (isShooting && bossActive) ? 'block' : 'none';
+
+                if (!isShooting) {
+                    const limit = (TRACK_WIDTH/2) - 0.5;
+                    if (keys.Left && player.position.x > -limit) player.position.x -= 0.25;
+                    if (keys.Right && player.position.x < limit) player.position.x += 0.25;
+                }
+
+                if (isJumping) { 
+                    player.position.y += velocityY; 
+                    velocityY += gravity; 
+                    if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; } 
+                }
                 
                 if (worldShake > 0) {
                     renderer.domElement.style.transform = `translate(${(Math.random()-0.5)*worldShake}px, ${(Math.random()-0.5)*worldShake}px)`;
                     worldShake *= 0.95;
                 }
 
+                // Shooting Logic
                 if (keys.Z && shootCooldown <= 0) {
-                    const bSize = isDesperate ? 0.3 : 0.12;
+                    const bSize = isDesperate ? 0.4 : 0.15;
                     const bCol = isDesperate ? 0xff0000 : 0x00ff00;
-                    const b = new THREE.Mesh(new THREE.BoxGeometry(bSize, bSize, 0.5), new THREE.MeshLambertMaterial({color: bCol, emissive: bCol}));
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(bSize, bSize, 0.6), new THREE.MeshLambertMaterial({color: bCol, emissive: bCol}));
                     b.position.copy(player.position);
-                    let vy = (bossActive && bossObj && bossIntroState === 0) ? ((bossObj.position.y - player.position.y) / Math.abs(bossObj.position.z - player.position.z)) * 2.2 : 0;
-                    b.userData.velocity = new THREE.Vector3(0, vy, -2.4);
-                    scene.add(b); playerBullets.push(b); shootCooldown = isDesperate ? 3 : 4;
+                    let vy = (bossActive && bossObj && bossIntroState === 0) ? ((bossObj.position.y - player.position.y) / Math.abs(bossObj.position.z - player.position.z)) * 2.5 : 0;
+                    b.userData.velocity = new THREE.Vector3(0, vy, -2.6);
+                    scene.add(b); playerBullets.push(b); shootCooldown = 5;
                 }
                 if(shootCooldown > 0) shootCooldown--;
 
@@ -161,20 +174,21 @@
                         }
                     } else {
                         if(bossHP < 400 && !isDesperate) {
-                            isDesperate = true;
-                            bossObj.material.color.set(0xff0000);
-                            worldShake = 25;
+                            isDesperate = true; bossObj.material.color.set(0xff0000); worldShake = 25;
                         }
                         bossObj.position.z = player.position.z - 25;
-                        bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.06);
+                        // Boss hovers near player's X to stay threatening
+                        bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.08);
                         bossObj.position.y = 6 + Math.cos(Date.now() * 0.005) * 2;
+                        
                         laughTimer += isDesperate ? 2 : 1;
-                        if(laughTimer % 70 === 0) spawnBossAttack();
+                        if(laughTimer % 60 === 0) spawnBossAttack(); // More frequent attacks
+                        
                         if(laughTimer > 240) {
                             bossObj.material.map = laughTex; audios.laugh.play();
                             const group = new THREE.Group();
-                            group.add(new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.2, 1.2), new THREE.MeshLambertMaterial({color: isDesperate ? 0xff0000 : 0xff00ff, emissive: isDesperate ? 0xff0000 : 0xff00ff, emissiveIntensity: 2})));
-                            group.position.set(0, 0.5, player.position.z - 60);
+                            group.add(new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.5, 1.5), new THREE.MeshLambertMaterial({color: isDesperate ? 0xff0000 : 0xff00ff, emissive: isDesperate ? 0xff0000 : 0xff00ff, emissiveIntensity: 2})));
+                            group.position.set(0, 0.75, player.position.z - 65);
                             scene.add(group); obstacles.push({ mesh: group, width: TRACK_WIDTH, special: false });
                             setTimeout(() => { if(bossObj) bossObj.material.map = baseTex; }, 800);
                             laughTimer = 0;
@@ -184,8 +198,8 @@
 
                 playerBullets.forEach((b, bi) => {
                     b.position.add(b.userData.velocity);
-                    if(bossObj && bossIntroState === 0 && b.position.distanceTo(bossObj.position) < 4.5) {
-                        bossHP -= isDesperate ? 2 : 1; 
+                    if(bossObj && bossIntroState === 0 && b.position.distanceTo(bossObj.position) < 5) {
+                        bossHP -= isDesperate ? 3 : 1;
                         document.getElementById('boss-ui').innerText = `BOSS HP: ${Math.max(0, bossHP)}`;
                         scene.remove(b); playerBullets.splice(bi, 1);
                         if(bossHP <= 0) winGame();
@@ -195,16 +209,14 @@
 
                 if(!invulnerable) {
                     obstacles.forEach((obj, i) => {
-                        obj.mesh.position.z += speed + (isDesperate ? 0.2 : 0);
-                        if (Math.abs(player.position.x - obj.mesh.position.x) < (obj.width/2) + 0.4 && player.position.y < 1.4 && Math.abs(player.position.z - obj.mesh.position.z) < 1) {
-                            if(obj.special) triggerBoss(obj); else endGame();
-                        }
+                        obj.mesh.position.z += speed + (isDesperate ? 0.25 : 0);
+                        if (Math.abs(player.position.x - obj.mesh.position.x) < (obj.width/2) + 0.5 && player.position.y < 1.6 && Math.abs(player.position.z - obj.mesh.position.z) < 1.2) endGame();
                         if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
                     });
                     bossProjectiles.forEach((p, i) => {
                         p.position.add(p.userData.velocity);
-                        if(player.position.distanceTo(p.position) < 1.0) endGame();
-                        if(p.position.z > 25 || p.position.y < -1) { scene.remove(p); bossProjectiles.splice(i, 1); }
+                        if(player.position.distanceTo(p.position) < 1.1) endGame();
+                        if(p.position.z > 25 || p.position.y < -2) { scene.remove(p); bossProjectiles.splice(i, 1); }
                     });
                 }
             }
@@ -214,11 +226,11 @@
         function spawnObstacle() {
             if (gameOver || bossActive) return;
             const isSpecial = Math.random() < 0.1;
-            const width = isSpecial ? 2 : (Math.random() < 0.4 ? TRACK_WIDTH : 4);
+            const width = isSpecial ? 2 : (Math.random() < 0.4 ? TRACK_WIDTH : 6);
             const col = isSpecial ? 0xff00ff : 0xff0000;
             const group = new THREE.Group();
             group.add(new THREE.Mesh(new THREE.BoxGeometry(width, 1, 1), new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 2 })));
-            group.position.set(width > 10 ? 0 : (Math.random()-0.5)*(TRACK_WIDTH-4), 0.5, -120);
+            group.position.set(width > 10 ? 0 : (Math.random()-0.5)*(TRACK_WIDTH-6), 0.5, -120);
             scene.add(group);
             obstacles.push({ mesh: group, width: width, special: isSpecial });
         }
