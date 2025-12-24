@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Lockdown</title>
+    <title>Pixel Runner - Safe Summon</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
@@ -10,14 +10,13 @@
         #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; z-index: 11; }
         #boss-ui { position: absolute; top: 20px; right: 20px; color: #f0f; font-size: 24px; display: none; z-index: 11; }
         #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: none; background: #000; padding: 30px; border: 1px solid #f0f; z-index: 12; }
-        #shoot-warning { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); color: #f00; font-weight: bold; display: none; z-index: 11; }
+        button { background: #440044; color: #f0f; border: 1px solid #f0f; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
     <div id="crt-overlay"></div>
     <div id="ui">Score: 0</div>
     <div id="boss-ui">BOSS HP: 1225</div>
-    <div id="shoot-warning">STATIONARY FIRE ACTIVE</div>
     <div id="msg"><h1 id="status">CONNECTION TERMINATED</h1><button onclick="window.location.reload()">RE-LINK</button></div>
 
     <audio id="bgm" loop src="https://github.com/sand-yy/sand-yy.github.io/raw/refs/heads/main/Air%20Waves.mp3"></audio>
@@ -66,7 +65,7 @@
 
         let score = 0, obstacles = [], particles = [], bossProjectiles = [], playerBullets = [], speed = 0.35;
         let gameOver = false, isJumping = false, velocityY = 0, bossActive = false, bossObj = null, laughTimer = 0, bossHP = 1225;
-        let bossIntroState = 0, introTime = 0, worldShake = 0, isDesperate = false, invulnerable = false;
+        let bossIntroState = 0, introTime = 0, worldShake = 0, isDesperate = false;
         const gravity = -0.016, jumpPower = 0.3;
 
         const keys = { Left: false, Right: false, Z: false };
@@ -75,7 +74,6 @@
             if (e.key === 'ArrowLeft') keys.Left = true;
             if (e.key === 'ArrowRight') keys.Right = true;
             if (e.key.toLowerCase() === 'z') keys.Z = true;
-            // Only jump if NOT shooting
             if (e.key === 'ArrowUp' && !isJumping && !gameOver && !keys.Z) { velocityY = jumpPower; isJumping = true; }
         });
         window.addEventListener('keyup', (e) => {
@@ -85,37 +83,31 @@
         });
 
         function triggerBoss(brick) {
-            invulnerable = true;
             scene.remove(brick.mesh);
-            obstacles.forEach(o => scene.remove(o.mesh));
-            obstacles = [];
+            obstacles = []; // Kill all other bricks immediately
             bossActive = true; bossIntroState = 1; introTime = 0;
             audios.bgm.pause(); audios.bgm.currentTime = 0;
+            
             bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true, opacity: 0 }));
             bossObj.scale.set(8, 8, 1);
             bossObj.position.set(0, 5, player.position.z - 60);
             scene.add(bossObj);
-            setTimeout(() => { invulnerable = false; }, 800);
         }
 
         function spawnBossAttack() {
             const pX = player.position.x;
             const col = isDesperate ? 0xff0000 : 0xff00ff;
-            
-            // LETHAL RAIN: Spawns directly on and around player
             for(let i=-1; i<=1; i++) {
                 const p = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshLambertMaterial({color: col, emissive: col}));
                 p.position.set(pX + (i*2.5), 20, player.position.z - 45);
-                p.userData.velocity = new THREE.Vector3(0, -0.35, 0.35); // Faster fall
+                p.userData.velocity = new THREE.Vector3(0, -0.38, 0.35);
                 scene.add(p);
                 bossProjectiles.push(p);
             }
-
-            // AIMBOT SNIPER: Targets current player center
             const proj = new THREE.Mesh(new THREE.SphereGeometry(0.7), new THREE.MeshLambertMaterial({color: 0xffff00, emissive: 0xffff00}));
             proj.position.copy(bossObj.position);
             const dir = new THREE.Vector3().subVectors(player.position, bossObj.position).normalize();
-            proj.userData.velocity = dir.multiplyScalar(0.4); // High velocity
+            proj.userData.velocity = dir.multiplyScalar(0.42);
             scene.add(proj);
             bossProjectiles.push(proj);
         }
@@ -124,19 +116,14 @@
         function animate() {
             requestAnimationFrame(animate);
             if (!gameOver) {
-                // RESTRICTED MOVEMENT: No moving or jumping while Z is held
                 const isShooting = keys.Z;
-                document.getElementById('shoot-warning').style.display = (isShooting && bossActive) ? 'block' : 'none';
-
                 if (!isShooting) {
                     const limit = (TRACK_WIDTH/2) - 0.5;
                     if (keys.Left && player.position.x > -limit) player.position.x -= 0.25;
                     if (keys.Right && player.position.x < limit) player.position.x += 0.25;
                 }
-
                 if (isJumping) { 
-                    player.position.y += velocityY; 
-                    velocityY += gravity; 
+                    player.position.y += velocityY; velocityY += gravity; 
                     if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; } 
                 }
                 
@@ -145,7 +132,6 @@
                     worldShake *= 0.95;
                 }
 
-                // Shooting Logic
                 if (keys.Z && shootCooldown <= 0) {
                     const bSize = isDesperate ? 0.4 : 0.15;
                     const bCol = isDesperate ? 0xff0000 : 0x00ff00;
@@ -160,30 +146,22 @@
                 if(!bossActive) { if(Math.random() < 0.015) spawnObstacle(); }
                 else if(bossObj) {
                     if(bossIntroState === 1) { 
-                        introTime++;
-                        bossObj.material.opacity = Math.min(1, bossObj.material.opacity + 0.02);
-                        bossObj.position.z += 0.15;
-                        if(introTime > 60) bossIntroState = 2;
+                        introTime++; bossObj.material.opacity = Math.min(1, bossObj.material.opacity + 0.02);
+                        bossObj.position.z += 0.15; if(introTime > 60) bossIntroState = 2;
                     } else if(bossIntroState === 2) {
-                        bossObj.position.x = 35 - (introTime-60)*2.5;
-                        introTime++;
+                        bossObj.position.x = 35 - (introTime-60)*2.5; introTime++;
                         if(bossObj.position.x <= 0) {
                             bossObj.position.x = 0; bossIntroState = 0;
                             audios.bossBgm.play(); document.getElementById('boss-ui').style.display = 'block';
                             worldShake = 15;
                         }
                     } else {
-                        if(bossHP < 400 && !isDesperate) {
-                            isDesperate = true; bossObj.material.color.set(0xff0000); worldShake = 25;
-                        }
+                        if(bossHP < 400 && !isDesperate) { isDesperate = true; bossObj.material.color.set(0xff0000); worldShake = 25; }
                         bossObj.position.z = player.position.z - 25;
-                        // Boss hovers near player's X to stay threatening
                         bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.08);
                         bossObj.position.y = 6 + Math.cos(Date.now() * 0.005) * 2;
-                        
                         laughTimer += isDesperate ? 2 : 1;
-                        if(laughTimer % 60 === 0) spawnBossAttack(); // More frequent attacks
-                        
+                        if(laughTimer % 55 === 0) spawnBossAttack();
                         if(laughTimer > 240) {
                             bossObj.material.map = laughTex; audios.laugh.play();
                             const group = new THREE.Group();
@@ -207,18 +185,23 @@
                     if(b.position.z < player.position.z - 100) { scene.remove(b); playerBullets.splice(bi, 1); }
                 });
 
-                if(!invulnerable) {
-                    obstacles.forEach((obj, i) => {
-                        obj.mesh.position.z += speed + (isDesperate ? 0.25 : 0);
-                        if (Math.abs(player.position.x - obj.mesh.position.x) < (obj.width/2) + 0.5 && player.position.y < 1.6 && Math.abs(player.position.z - obj.mesh.position.z) < 1.2) endGame();
-                        if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
-                    });
-                    bossProjectiles.forEach((p, i) => {
-                        p.position.add(p.userData.velocity);
-                        if(player.position.distanceTo(p.position) < 1.1) endGame();
-                        if(p.position.z > 25 || p.position.y < -2) { scene.remove(p); bossProjectiles.splice(i, 1); }
-                    });
-                }
+                obstacles.forEach((obj, i) => {
+                    obj.mesh.position.z += speed + (isDesperate ? 0.25 : 0);
+                    const dx = Math.abs(player.position.x - obj.mesh.position.x);
+                    const dz = Math.abs(player.position.z - obj.mesh.position.z);
+                    if (dx < (obj.width/2) + 0.5 && player.position.y < 1.6 && dz < 1.2) {
+                        // CRITICAL FIX: Explicitly check special flag
+                        if(obj.special) { triggerBoss(obj); obstacles.splice(i, 1); } 
+                        else { endGame(); }
+                    }
+                    if (obj.mesh && obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
+                });
+
+                bossProjectiles.forEach((p, i) => {
+                    p.position.add(p.userData.velocity);
+                    if(player.position.distanceTo(p.position) < 1.1) endGame();
+                    if(p.position.z > 25 || p.position.y < -2) { scene.remove(p); bossProjectiles.splice(i, 1); }
+                });
             }
             renderer.render(scene, camera);
         }
