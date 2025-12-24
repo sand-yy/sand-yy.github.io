@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Boss Endurance</title>
+    <title>Pixel Runner - Full Features</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay {
@@ -43,9 +43,19 @@
         document.body.appendChild(renderer.domElement);
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.05));
-        const floor = new THREE.Mesh(new THREE.PlaneGeometry(100, 2000), new THREE.MeshLambertMaterial({ color: 0x080808 }));
+        
+        // --- FLOOR & BORDERS ---
+        const floor = new THREE.Mesh(new THREE.PlaneGeometry(42, 2000), new THREE.MeshLambertMaterial({ color: 0x080808 }));
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
+
+        const borderGeo = new THREE.BoxGeometry(1, 2, 2000);
+        const borderMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+        const leftBorder = new THREE.Mesh(borderGeo, borderMat);
+        leftBorder.position.set(-21, 1, -900);
+        const rightBorder = new THREE.Mesh(borderGeo, borderMat);
+        rightBorder.position.set(21, 1, -900);
+        scene.add(leftBorder, rightBorder);
 
         const player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 2 }));
         player.position.y = 0.5;
@@ -59,8 +69,7 @@
         const loader = new THREE.TextureLoader();
         function loadPixelated(url) {
             const tex = loader.load(url);
-            tex.magFilter = THREE.NearestFilter;
-            tex.minFilter = THREE.NearestFilter;
+            tex.magFilter = tex.minFilter = THREE.NearestFilter;
             return tex;
         }
         const baseTex = loadPixelated('https://github.com/sand-yy/sand-yy.github.io/blob/main/base.png?raw=true');
@@ -68,12 +77,11 @@
 
         const bgm = document.getElementById('bgm');
         const bossBgm = document.getElementById('bossBgm');
-        const deathSfx = document.getElementById('deathSfx');
-        deathSfx.volume = 0.5;
+        document.getElementById('deathSfx').volume = 0.5;
         bossBgm.volume = 0;
 
-        let score = 0, obstacles = [], particles = [], bossProjectiles = [], playerBullets = [], speed = 0.35, gameOver = false, isJumping = false, velocityY = 0;
-        let bossActive = false, bossObj = null, laughTimer = 0, bossRising = false, bossHP = 1225;
+        let score = 0, obstacles = [], particles = [], bossProjectiles = [], playerBullets = [], speed = 0.35;
+        let gameOver = false, isJumping = false, velocityY = 0, bossActive = false, bossObj = null, laughTimer = 0, bossRising = false, bossHP = 1225;
         let warningMesh = null;
         const gravity = -0.016, jumpPower = 0.3, friction = 0.96;
 
@@ -82,49 +90,36 @@
             if(!gameOver) bgm.play().catch(()=>{});
             if (e.key === 'ArrowLeft') keys.Left = true;
             if (e.key === 'ArrowRight') keys.Right = true;
-            if (e.key === 'z' || e.key === 'Z') keys.Z = true;
+            if (e.key.toLowerCase() === 'z') keys.Z = true;
             if (e.key === 'ArrowUp' && !isJumping && !gameOver) { velocityY = jumpPower; isJumping = true; }
         });
         window.addEventListener('keyup', (e) => {
             if (e.key === 'ArrowLeft') keys.Left = false;
             if (e.key === 'ArrowRight') keys.Right = false;
-            if (e.key === 'z' || e.key === 'Z') keys.Z = false;
+            if (e.key.toLowerCase() === 'z') keys.Z = false;
         });
 
-        function spawnExplosion(x, y, z, color = 0x00ff00) {
-            for(let i=0; i<64; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshLambertMaterial({ color: color, emissive: color }));
+        function spawnImpactParticles(x, y, z, color) {
+            for(let i=0; i<8; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,0.15), new THREE.MeshLambertMaterial({ color: color, emissive: color }));
                 p.position.set(x, y, z);
-                p.userData.velocity = new THREE.Vector3((Math.random()-0.5)*1.2, Math.random()*0.8, (Math.random()-0.5)*1.2);
+                p.userData.velocity = new THREE.Vector3((Math.random()-0.5)*0.5, Math.random()*0.5, Math.random()*0.5);
                 scene.add(p);
                 particles.push(p);
             }
         }
 
         function triggerBoss(brickPos) {
-            bossActive = true;
-            bossRising = true;
+            bossActive = true; bossRising = true;
             document.getElementById('boss-ui').style.display = 'block';
-            
-            let fadeOut = setInterval(() => {
-                if(bgm.volume > 0.05) bgm.volume -= 0.05;
-                else { bgm.pause(); clearInterval(fadeOut); }
-            }, 100);
-
+            let fadeOut = setInterval(() => { if(bgm.volume > 0.05) bgm.volume -= 0.05; else { bgm.pause(); clearInterval(fadeOut); } }, 100);
             bossBgm.play();
-            let fadeIn = setInterval(() => {
-                if(bossBgm.volume < 0.5) bossBgm.volume += 0.05;
-                else clearInterval(fadeIn);
-            }, 200);
-
-            const spriteMat = new THREE.SpriteMaterial({ map: baseTex });
-            bossObj = new THREE.Sprite(spriteMat);
+            let fadeIn = setInterval(() => { if(bossBgm.volume < 0.5) bossBgm.volume += 0.05; else clearInterval(fadeIn); }, 200);
+            bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex }));
             bossObj.scale.set(5, 5, 1);
             bossObj.position.copy(brickPos);
-            bossObj.position.y = 0.5; // Start inside the brick
+            bossObj.position.y = 0.5;
             scene.add(bossObj);
-
-            // Kill all non-boss obstacles
             obstacles.forEach(o => { if(!o.special) scene.remove(o.mesh) });
         }
 
@@ -134,14 +129,14 @@
             const isLong = !isSpecial && Math.random() < 0.4;
             const width = isSpecial ? 2 : (isLong ? 26 : 2);
             const mat = new THREE.MeshLambertMaterial({ emissiveIntensity: 2 });
-            if(isSpecial) { mat.color.set(0xff00ff); mat.emissive.set(0xffff00); } 
-            else { mat.color.set(isLong ? 0xffaa00 : 0xff0000); mat.emissive.set(mat.color); }
+            const col = isSpecial ? 0xff00ff : (isLong ? 0xffaa00 : 0xff0000);
+            mat.color.set(col); mat.emissive.set(isSpecial ? 0xffff00 : col);
             const group = new THREE.Group();
             group.add(new THREE.Mesh(new THREE.BoxGeometry(width, 1, 1), mat));
             group.add(new THREE.PointLight(mat.color, isSpecial?60:30, 15));
-            group.position.set(isLong ? 0 : (Math.random()-0.5)*20, 0.5, -120);
+            group.position.set(isLong ? 0 : (Math.random()-0.5)*38, 0.5, -120);
             scene.add(group);
-            obstacles.push({ mesh: group, width: width, special: isSpecial });
+            obstacles.push({ mesh: group, width: width, special: isSpecial, color: col });
         }
 
         let shootCooldown = 0;
@@ -156,126 +151,101 @@
                 }
                 pLight.position.copy(player.position);
 
-                // Player Shooting
                 if (keys.Z && shootCooldown <= 0) {
-                    const b = new THREE.Mesh(new THREE.BoxGeometry(0.3,0.3,0.8), new THREE.MeshLambertMaterial({color: 0x00ff00, emissive: 0x00ff00}));
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,1), new THREE.MeshLambertMaterial({color: 0x00ff00, emissive: 0x00ff00}));
                     b.position.copy(player.position);
-                    scene.add(b);
-                    playerBullets.push(b);
-                    shootCooldown = 6;
+                    scene.add(b); playerBullets.push(b); shootCooldown = 8;
                 }
                 if(shootCooldown > 0) shootCooldown--;
 
-                if(!bossActive) {
-                    let spawnTimer = Date.now() % 1000;
-                    if (spawnTimer < 20) spawnObstacle();
-                } else if(bossObj) {
+                if(!bossActive) { if(Date.now() % 1000 < 20) spawnObstacle(); }
+                else if(bossObj) {
                     if(bossRising) {
-                        bossObj.position.y += 0.05;
-                        bossObj.position.z += speed;
+                        bossObj.position.y += 0.05; bossObj.position.z += speed;
                         if(bossObj.position.y >= 5) bossRising = false;
                     } else {
                         bossObj.position.z = player.position.z - 20;
                         bossObj.position.x = Math.sin(Date.now() * 0.001) * 15;
                         bossObj.position.y = 5 + Math.cos(Date.now() * 0.003) * 2;
-                        
                         laughTimer++;
-                        // Warning Flashes
-                        if(laughTimer === 100 && !gameOver) {
-                            warningMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 2), new THREE.MeshBasicMaterial({color: 0xff00ff, transparent: true, opacity: 0.5}));
+                        if(laughTimer === 100) {
+                            warningMesh = new THREE.Mesh(new THREE.PlaneGeometry(100, 2), new THREE.MeshBasicMaterial({color: 0xff00ff, transparent: true, opacity: 0.4}));
                             warningMesh.rotation.x = -Math.PI/2;
-                            warningMesh.position.set(0, 0.01, player.position.z - 30);
+                            warningMesh.position.set(0, 0.02, player.position.z - 30);
                             scene.add(warningMesh);
                         }
-
-                        if(laughTimer > 180) { // Slower fire rate
-                            bossObj.material.map = laughTex;
-                            document.getElementById('laughSfx').play();
-                            
-                            // Slow Bullets
-                            [0xff00ff, 0xffff00].forEach((col, idx) => {
-                                const proj = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshLambertMaterial({color: col, emissive: col}));
+                        if(laughTimer > 180) {
+                            bossObj.material.map = laughTex; document.getElementById('laughSfx').play();
+                            [0xff00ff, 0xffff00].forEach((col) => {
+                                const proj = new THREE.Mesh(new THREE.SphereGeometry(0.4), new THREE.MeshLambertMaterial({color: col, emissive: col}));
                                 proj.position.copy(bossObj.position);
                                 const dir = new THREE.Vector3().subVectors(player.position, proj.position).normalize();
-                                proj.userData.velocity = dir.multiplyScalar(0.25); // SLOWER
-                                scene.add(proj);
-                                bossProjectiles.push(proj);
+                                proj.userData.velocity = dir.multiplyScalar(0.25);
+                                scene.add(proj); bossProjectiles.push(proj);
                             });
-
                             if(warningMesh) { scene.remove(warningMesh); warningMesh = null; }
                             const barCol = Math.random() > 0.5 ? 0xff00ff : 0xffff00;
                             const group = new THREE.Group();
-                            group.add(new THREE.Mesh(new THREE.BoxGeometry(30, 1, 1), new THREE.MeshLambertMaterial({color: barCol, emissive: barCol, emissiveIntensity: 2})));
-                            group.add(new THREE.PointLight(barCol, 40, 15));
+                            group.add(new THREE.Mesh(new THREE.BoxGeometry(40, 1, 1), new THREE.MeshLambertMaterial({color: barCol, emissive: barCol, emissiveIntensity: 2})));
                             group.position.set(0, 0.5, player.position.z - 30);
-                            scene.add(group);
-                            obstacles.push({ mesh: group, width: 30, special: false });
-
+                            scene.add(group); obstacles.push({ mesh: group, width: 40, special: false, color: barCol });
                             setTimeout(() => { if(bossObj) bossObj.material.map = baseTex; }, 900);
                             laughTimer = 0;
                         }
                     }
                 }
 
-                // Bullet Collision Logic
                 playerBullets.forEach((b, bi) => {
-                    b.position.z -= 1.2;
-                    if(bossObj && b.position.distanceTo(bossObj.position) < 3) {
-                        bossHP--;
-                        document.getElementById('boss-ui').innerText = `BOSS HP: ${bossHP}`;
+                    b.position.z -= 1.5;
+                    // Hit Boss
+                    if(bossObj && !bossRising && b.position.distanceTo(bossObj.position) < 3) {
+                        bossHP--; document.getElementById('boss-ui').innerText = `BOSS HP: ${bossHP}`;
+                        spawnImpactParticles(b.position.x, b.position.y, b.position.z, 0xff00ff);
                         scene.remove(b); playerBullets.splice(bi, 1);
                         if(bossHP <= 0) winGame();
                     }
+                    // Hit Obstacles
+                    obstacles.forEach(o => {
+                        const dx = Math.abs(b.position.x - o.mesh.position.x);
+                        const dz = Math.abs(b.position.z - o.mesh.position.z);
+                        if(dx < o.width/2 && dz < 1) {
+                            spawnImpactParticles(b.position.x, b.position.y, b.position.z, o.color);
+                            scene.remove(b); playerBullets.splice(bi, 1);
+                        }
+                    });
                     if(b.position.z < player.position.z - 100) { scene.remove(b); playerBullets.splice(bi, 1); }
                 });
 
-                // Obstacle Collisions
                 obstacles.forEach((obj, i) => {
                     if(!bossActive) obj.mesh.position.z += speed;
                     const halfW = obj.width / 2;
                     if (player.position.x > obj.mesh.position.x - halfW - 0.4 && player.position.x < obj.mesh.position.x + halfW + 0.4 &&
                         player.position.y < obj.mesh.position.y + 0.8 &&
                         player.position.z > obj.mesh.position.z - 0.8 && player.position.z < obj.mesh.position.z + 0.8) {
-                        if(obj.special) { triggerBoss(obj.mesh.position); }
-                        else endGame();
+                        if(obj.special) triggerBoss(obj.mesh.position); else endGame();
                     }
                     if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
                 });
 
                 bossProjectiles.forEach((p, i) => {
                     p.position.add(p.userData.velocity);
-                    if(player.position.distanceTo(p.position) < 0.9) endGame();
+                    if(player.position.distanceTo(p.position) < 0.8) endGame();
                     if(p.position.z > 20) { scene.remove(p); bossProjectiles.splice(i, 1); }
                 });
 
             } else {
-                particles.forEach(p => {
+                particles.forEach((p, i) => {
                     p.position.add(p.userData.velocity); p.userData.velocity.multiplyScalar(friction);
                     if (p.position.y > 0.05) p.userData.velocity.y += gravity;
                     else { p.position.y = 0.05; p.userData.velocity.y *= -0.5; }
+                    if(p.userData.velocity.length() < 0.01) { scene.remove(p); particles.splice(i, 1); }
                 });
             }
             renderer.render(scene, camera);
         }
 
-        function endGame() {
-            if(gameOver) return;
-            gameOver = true;
-            deathSfx.play();
-            bgm.pause(); bossBgm.pause();
-            spawnExplosion(player.position.x, player.position.y, player.position.z);
-            scene.remove(player); scene.remove(pLight);
-            document.getElementById('msg').style.display = 'block';
-        }
-
-        function winGame() {
-            gameOver = true;
-            bossBgm.pause();
-            document.getElementById('status').innerText = "BOSS DEFEATED";
-            spawnExplosion(bossObj.position.x, bossObj.position.y, bossObj.position.z, 0xff00ff);
-            scene.remove(bossObj);
-            document.getElementById('msg').style.display = 'block';
-        }
+        function endGame() { if(gameOver) return; gameOver = true; document.getElementById('deathSfx').play(); bgm.pause(); bossBgm.pause(); scene.remove(player); document.getElementById('msg').style.display = 'block'; }
+        function winGame() { gameOver = true; bossBgm.pause(); document.getElementById('status').innerText = "BOSS DEFEATED"; scene.remove(bossObj); document.getElementById('msg').style.display = 'block'; }
 
         function onResize() {
             camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
