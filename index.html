@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Desperation</title>
+    <title>Pixel Runner - Fixed Summon</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
@@ -10,6 +10,7 @@
         #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; z-index: 11; }
         #boss-ui { position: absolute; top: 20px; right: 20px; color: #f0f; font-size: 24px; display: none; z-index: 11; }
         #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: none; background: #000; padding: 30px; border: 1px solid #f0f; z-index: 12; }
+        button { background: #440044; color: #f0f; border: 1px solid #f0f; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -64,12 +65,12 @@
 
         let score = 0, obstacles = [], particles = [], bossProjectiles = [], playerBullets = [], speed = 0.35;
         let gameOver = false, isJumping = false, velocityY = 0, bossActive = false, bossObj = null, laughTimer = 0, bossHP = 1225;
-        let bossIntroState = 0, introTime = 0, worldShake = 0, isDesperate = false;
+        let bossIntroState = 0, introTime = 0, worldShake = 0, isDesperate = false, invulnerable = false;
         const gravity = -0.016, jumpPower = 0.3;
 
         const keys = { Left: false, Right: false, Z: false };
         window.addEventListener('keydown', (e) => {
-            if(!gameOver && audios.bgm.paused && !bossActive) audios.bgm.play();
+            if(!gameOver && audios.bgm.paused && !bossActive) audios.bgm.play().catch(()=>{});
             if (e.key === 'ArrowLeft') keys.Left = true;
             if (e.key === 'ArrowRight') keys.Right = true;
             if (e.key.toLowerCase() === 'z') keys.Z = true;
@@ -82,39 +83,38 @@
         });
 
         function triggerBoss(brick) {
+            invulnerable = true; // Temporary god mode so you don't die on the brick
             scene.remove(brick.mesh);
-            obstacles = obstacles.filter(o => o !== brick);
-            bossActive = true; bossIntroState = 1; introTime = 0;
+            obstacles = []; // Wipe everything immediately
+            
+            bossActive = true; 
+            bossIntroState = 1; 
+            introTime = 0;
+            
             audios.bgm.pause(); audios.bgm.currentTime = 0;
             
-            bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true }));
+            bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true, opacity: 0 }));
             bossObj.scale.set(8, 8, 1);
-            bossObj.position.set(0, 5, -50); 
-            bossObj.material.opacity = 0;
+            bossObj.position.set(0, 5, player.position.z - 60); // Spawn further away
             scene.add(bossObj);
-            obstacles.forEach(o => scene.remove(o.mesh));
-            obstacles = [];
+
+            setTimeout(() => { invulnerable = false; }, 500); // God mode off once sequence starts
         }
 
         function spawnBossAttack() {
-            // Target the player's X position precisely
             const pX = player.position.x;
             const col = isDesperate ? 0xff0000 : 0xff00ff;
-            
-            // 1. Triple Targeted Rain
             for(let i=-1; i<=1; i++) {
                 const p = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshLambertMaterial({color: col, emissive: col}));
-                p.position.set(pX + (i*3), 15, player.position.z - 30);
-                p.userData.velocity = new THREE.Vector3(0, -0.25, 0.2);
+                p.position.set(pX + (i*4), 15, player.position.z - 40);
+                p.userData.velocity = new THREE.Vector3(0, -0.28, 0.25);
                 scene.add(p);
                 bossProjectiles.push(p);
             }
-
-            // 2. Focused Burst
             const proj = new THREE.Mesh(new THREE.SphereGeometry(0.6), new THREE.MeshLambertMaterial({color: 0xffff00, emissive: 0xffff00}));
             proj.position.copy(bossObj.position);
             const dir = new THREE.Vector3().subVectors(player.position, bossObj.position).normalize();
-            proj.userData.velocity = dir.multiplyScalar(0.28);
+            proj.userData.velocity = dir.multiplyScalar(0.32);
             scene.add(proj);
             bossProjectiles.push(proj);
         }
@@ -128,88 +128,85 @@
                 if (keys.Right && player.position.x < limit) player.position.x += 0.25;
                 if (isJumping) { player.position.y += velocityY; velocityY += gravity; if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; } }
                 
-                // Screen Shake
                 if (worldShake > 0) {
                     renderer.domElement.style.transform = `translate(${(Math.random()-0.5)*worldShake}px, ${(Math.random()-0.5)*worldShake}px)`;
                     worldShake *= 0.95;
                 }
 
                 if (keys.Z && shootCooldown <= 0) {
-                    const b = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.4), new THREE.MeshLambertMaterial({color: 0x00ff00, emissive: 0x00ff00}));
+                    const bSize = isDesperate ? 0.3 : 0.12;
+                    const bCol = isDesperate ? 0xff0000 : 0x00ff00;
+                    const b = new THREE.Mesh(new THREE.BoxGeometry(bSize, bSize, 0.5), new THREE.MeshLambertMaterial({color: bCol, emissive: bCol}));
                     b.position.copy(player.position);
-                    let vy = (bossActive && bossObj && bossIntroState === 0) ? ((bossObj.position.y - player.position.y) / Math.abs(bossObj.position.z - player.position.z)) * 2 : 0;
-                    b.userData.velocity = new THREE.Vector3(0, vy, -2.2);
-                    scene.add(b); playerBullets.push(b); shootCooldown = 4;
+                    let vy = (bossActive && bossObj && bossIntroState === 0) ? ((bossObj.position.y - player.position.y) / Math.abs(bossObj.position.z - player.position.z)) * 2.2 : 0;
+                    b.userData.velocity = new THREE.Vector3(0, vy, -2.4);
+                    scene.add(b); playerBullets.push(b); shootCooldown = isDesperate ? 3 : 4;
                 }
                 if(shootCooldown > 0) shootCooldown--;
 
                 if(!bossActive) { if(Math.random() < 0.015) spawnObstacle(); }
                 else if(bossObj) {
-                    // CINEMATIC SEQUENCE
-                    if(bossIntroState === 1) { // Fading in & zooming
+                    if(bossIntroState === 1) { 
                         introTime++;
-                        bossObj.material.opacity += 0.02;
-                        bossObj.position.z += 0.2;
+                        bossObj.material.opacity = Math.min(1, bossObj.material.opacity + 0.02);
+                        bossObj.position.z += 0.15;
                         if(introTime > 60) bossIntroState = 2;
-                    } else if(bossIntroState === 2) { // Sweeping from right
-                        bossObj.position.x = 30 - (introTime-60)*2;
+                    } else if(bossIntroState === 2) {
+                        bossObj.position.x = 35 - (introTime-60)*2.5;
                         introTime++;
                         if(bossObj.position.x <= 0) {
                             bossObj.position.x = 0; bossIntroState = 0;
                             audios.bossBgm.play(); document.getElementById('boss-ui').style.display = 'block';
-                            worldShake = 20;
+                            worldShake = 15;
                         }
                     } else {
-                        // DESPERATION CHECK
                         if(bossHP < 400 && !isDesperate) {
                             isDesperate = true;
                             bossObj.material.color.set(0xff0000);
-                            worldShake = 30;
+                            worldShake = 25;
                         }
-
-                        // BOSS AI
                         bossObj.position.z = player.position.z - 25;
-                        bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.05);
+                        bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.06);
                         bossObj.position.y = 6 + Math.cos(Date.now() * 0.005) * 2;
-                        
                         laughTimer += isDesperate ? 2 : 1;
-                        if(laughTimer % 80 === 0) spawnBossAttack();
-
+                        if(laughTimer % 70 === 0) spawnBossAttack();
                         if(laughTimer > 240) {
                             bossObj.material.map = laughTex; audios.laugh.play();
                             const group = new THREE.Group();
-                            group.add(new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.2, 1.2), new THREE.MeshLambertMaterial({color: isDesperate ? 0xff0000 : 0xff00ff, emissive: 0xff0000, emissiveIntensity: 2})));
+                            group.add(new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH, 1.2, 1.2), new THREE.MeshLambertMaterial({color: isDesperate ? 0xff0000 : 0xff00ff, emissive: isDesperate ? 0xff0000 : 0xff00ff, emissiveIntensity: 2})));
                             group.position.set(0, 0.5, player.position.z - 60);
-                            scene.add(group); obstacles.push({ mesh: group, width: TRACK_WIDTH, special: false, color: 0xff0000 });
+                            scene.add(group); obstacles.push({ mesh: group, width: TRACK_WIDTH, special: false });
                             setTimeout(() => { if(bossObj) bossObj.material.map = baseTex; }, 800);
                             laughTimer = 0;
-                            if(isDesperate) worldShake = 10;
                         }
                     }
                 }
 
-                // Collisions & Updates
                 playerBullets.forEach((b, bi) => {
                     b.position.add(b.userData.velocity);
-                    if(bossObj && bossIntroState === 0 && b.position.distanceTo(bossObj.position) < 4) {
-                        bossHP--; document.getElementById('boss-ui').innerText = `BOSS HP: ${bossHP}`;
+                    if(bossObj && bossIntroState === 0 && b.position.distanceTo(bossObj.position) < 4.5) {
+                        bossHP -= isDesperate ? 2 : 1; 
+                        document.getElementById('boss-ui').innerText = `BOSS HP: ${Math.max(0, bossHP)}`;
                         scene.remove(b); playerBullets.splice(bi, 1);
                         if(bossHP <= 0) winGame();
                     }
                     if(b.position.z < player.position.z - 100) { scene.remove(b); playerBullets.splice(bi, 1); }
                 });
 
-                obstacles.forEach((obj, i) => {
-                    obj.mesh.position.z += speed + (isDesperate ? 0.15 : 0);
-                    if (Math.abs(player.position.x - obj.mesh.position.x) < (obj.width/2) + 0.4 && player.position.y < 1.4 && Math.abs(player.position.z - obj.mesh.position.z) < 1) endGame();
-                    if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
-                });
-
-                bossProjectiles.forEach((p, i) => {
-                    p.position.add(p.userData.velocity);
-                    if(player.position.distanceTo(p.position) < 1.0) endGame();
-                    if(p.position.z > 25 || p.position.y < -1) { scene.remove(p); bossProjectiles.splice(i, 1); }
-                });
+                if(!invulnerable) {
+                    obstacles.forEach((obj, i) => {
+                        obj.mesh.position.z += speed + (isDesperate ? 0.2 : 0);
+                        if (Math.abs(player.position.x - obj.mesh.position.x) < (obj.width/2) + 0.4 && player.position.y < 1.4 && Math.abs(player.position.z - obj.mesh.position.z) < 1) {
+                            if(obj.special) triggerBoss(obj); else endGame();
+                        }
+                        if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); if(!bossActive) score++; document.getElementById('ui').innerText = `Score: ${score}`; }
+                    });
+                    bossProjectiles.forEach((p, i) => {
+                        p.position.add(p.userData.velocity);
+                        if(player.position.distanceTo(p.position) < 1.0) endGame();
+                        if(p.position.z > 25 || p.position.y < -1) { scene.remove(p); bossProjectiles.splice(i, 1); }
+                    });
+                }
             }
             renderer.render(scene, camera);
         }
@@ -223,12 +220,11 @@
             group.add(new THREE.Mesh(new THREE.BoxGeometry(width, 1, 1), new THREE.MeshLambertMaterial({ color: col, emissive: col, emissiveIntensity: 2 })));
             group.position.set(width > 10 ? 0 : (Math.random()-0.5)*(TRACK_WIDTH-4), 0.5, -120);
             scene.add(group);
-            obstacles.push({ mesh: group, width: width, special: isSpecial, color: col });
+            obstacles.push({ mesh: group, width: width, special: isSpecial });
         }
 
         function endGame() { if(gameOver) return; gameOver = true; audios.bgm.pause(); audios.bossBgm.pause(); audios.death.play(); document.getElementById('msg').style.display = 'block'; }
         function winGame() { gameOver = true; audios.bossBgm.pause(); document.getElementById('status').innerText = "BOSS DEFEATED"; scene.remove(bossObj); document.getElementById('msg').style.display = 'block'; }
-
         function onResize() { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth/PIXEL_SCALE, window.innerHeight/PIXEL_SCALE, false); }
         window.addEventListener('resize', onResize); onResize(); animate();
     </script>
