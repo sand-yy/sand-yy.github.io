@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - Execution</title>
+    <title>Pixel Runner - Strategic Boss</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%); background-size: 100% 4px; pointer-events: none; z-index: 10; }
@@ -10,12 +10,9 @@
         #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; z-index: 11; }
         #boss-ui { position: absolute; top: 20px; right: 20px; color: #f0f; font-size: 24px; display: none; z-index: 11; }
         #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: none; background: #000; padding: 30px; border: 3px solid #f00; z-index: 100; }
+        #warning-text { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: #f00; font-size: 40px; font-weight: bold; display: none; z-index: 15; text-shadow: 0 0 10px #f00; }
         button { background: #440000; color: #f00; border: 1px solid #f00; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        #glass-crack { 
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-            background: url('https://raw.githubusercontent.com/sand-yy/sand-yy.github.io/refs/heads/main/output-onlinepngtools%20(1).png');
-            background-size: 100% 100%; display: none; pointer-events: none; z-index: 90; opacity: 0.9;
-        }
+        #glass-crack { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: url('https://raw.githubusercontent.com/sand-yy/sand-yy.github.io/refs/heads/main/output-onlinepngtools%20(1).png'); background-size: 100% 100%; display: none; pointer-events: none; z-index: 90; opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -23,6 +20,7 @@
     <div id="crt-overlay"></div>
     <div id="ui">Score: 0</div>
     <div id="boss-ui">BOSS HP: 1225</div>
+    <div id="warning-text">WARNING: ANOMALY DETECTED</div>
     <div id="msg"><h1 id="status">CONNECTION TERMINATED</h1><button onclick="window.location.reload()">RE-LINK</button></div>
 
     <audio id="bgm" loop src="https://github.com/sand-yy/sand-yy.github.io/raw/refs/heads/main/Air%20Waves.mp3"></audio>
@@ -85,30 +83,30 @@
             bossIntroState = 1; 
             introTime = 0;
             audios.bgm.pause();
+            document.getElementById('warning-text').style.display = 'block';
+            worldShake = 20;
+
             bossObj = new THREE.Sprite(new THREE.SpriteMaterial({ map: baseTex, transparent: true, opacity: 0 }));
             bossObj.scale.set(8, 8, 1);
-            bossObj.position.set(0, 5, player.position.z - 60);
+            bossObj.position.set(0, 5, player.position.z - 80); // Spawn further back for intro
             scene.add(bossObj);
+            
             obstacles.forEach(o => scene.remove(o.mesh));
             obstacles = [];
         }
 
         function spawnBossAttack() {
-            const pX = player.position.x;
+            const pX = player.position.x; // Lock in player X at start of attack
             const col = isDesperate ? 0xff0000 : 0xff00ff;
+            
+            // TARGETED Falling Attack (Centered on player's current X)
             for(let i=-1; i<=1; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 2.5), new THREE.MeshLambertMaterial({color: col, emissive: col, emissiveIntensity: 2}));
-                p.position.set(pX + (i*4), 25, player.position.z - 50);
-                p.userData.velocity = new THREE.Vector3(0, -0.45, 0.4);
+                const p = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.8, 1.8), new THREE.MeshLambertMaterial({color: col, emissive: col, emissiveIntensity: 2}));
+                p.position.set(pX + (i*3.5), 25, player.position.z - 50);
+                p.userData.velocity = new THREE.Vector3(0, -0.4, 0.4);
                 scene.add(p);
                 bossProjectiles.push(p);
             }
-            const proj = new THREE.Mesh(new THREE.SphereGeometry(0.8), new THREE.MeshLambertMaterial({color: 0xffff00, emissive: 0xffff00}));
-            proj.position.copy(bossObj.position);
-            const dir = new THREE.Vector3().subVectors(player.position, bossObj.position).normalize();
-            proj.userData.velocity = dir.multiplyScalar(0.45);
-            scene.add(proj);
-            bossProjectiles.push(proj);
         }
 
         let shootCd = 0;
@@ -139,19 +137,27 @@
                     if(spawnCooldown > 0) spawnCooldown--;
                     else if(Math.random() < 0.03) spawnObstacle(); 
                 } else if(bossObj && !deathCinematic) {
-                    if(bossIntroState === 1) {
-                        introTime++; bossObj.material.opacity += 0.02; bossObj.position.z += 0.1;
-                        if(introTime > 50) bossIntroState = 2;
-                    } else if(bossIntroState === 2) {
-                        bossObj.position.x = 35 - (introTime-50)*2.5; introTime++;
-                        if(bossObj.position.x <= 0) { bossIntroState = 0; audios.bossBgm.play(); document.getElementById('boss-ui').style.display='block'; }
+                    if(bossIntroState === 1) { // Warning phase
+                        introTime++; 
+                        if(introTime > 60) {
+                            document.getElementById('warning-text').style.display = 'none';
+                            bossIntroState = 2;
+                        }
+                    } else if(bossIntroState === 2) { // Zooming in from distance
+                        bossObj.material.opacity += 0.02; 
+                        bossObj.position.z += 0.4;
+                        if(bossObj.position.z >= player.position.z - 25) {
+                            bossIntroState = 0; 
+                            audios.bossBgm.play(); 
+                            document.getElementById('boss-ui').style.display='block';
+                        }
                     } else {
                         if(bossHP < 400 && !isDesperate) { isDesperate = true; bossObj.material.color.set(0xff0000); }
                         bossObj.position.z = player.position.z - 25;
                         bossObj.position.x = THREE.MathUtils.lerp(bossObj.position.x, player.position.x, 0.08);
                         bossObj.position.y = 6 + Math.cos(Date.now()*0.005)*2;
                         laughTimer++;
-                        if(laughTimer % 50 === 0) spawnBossAttack();
+                        if(laughTimer % 60 === 0) spawnBossAttack();
                     }
                 }
 
@@ -164,7 +170,7 @@
 
                 bossProjectiles.forEach((p, i) => {
                     p.position.add(p.userData.velocity);
-                    if(player.position.distanceTo(p.position) < 2) startDeathSequence();
+                    if(player.position.distanceTo(p.position) < 1.8) startDeathSequence();
                 });
 
                 playerBullets.forEach((b, bi) => {
