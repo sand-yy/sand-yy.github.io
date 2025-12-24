@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Runner - BOSS FIGHT</title>
+    <title>Pixel Runner - Fixed Hitboxes</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #crt-overlay {
@@ -20,7 +20,7 @@
 <body>
     <div id="crt-overlay"></div>
     <div id="ui">Score: 0</div>
-    <div id="msg"><h1>err.youdied</h1><button onclick="window.location.reload()">spawn</button></div>
+    <div id="msg"><h1>CONNECTION TERMINATED</h1><button onclick="window.location.reload()">RE-LINK</button></div>
 
     <audio id="bgm" loop src="https://github.com/sand-yy/sand-yy.github.io/raw/refs/heads/main/Air%20Waves.mp3"></audio>
     <audio id="deathSfx" src="https://github.com/sand-yy/sand-yy.github.io/raw/refs/heads/main/deltarune-explosion.mp3"></audio>
@@ -45,7 +45,6 @@
         floor.rotation.x = -Math.PI / 2;
         scene.add(floor);
 
-        // Player
         const player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 2 }));
         player.position.y = 0.5;
         scene.add(player);
@@ -55,15 +54,16 @@
         camera.position.set(0, 4, 8);
         camera.lookAt(0, 1, 0);
 
-        // Textures
         const loader = new THREE.TextureLoader();
         const baseTex = loader.load('https://github.com/sand-yy/sand-yy.github.io/blob/main/base.png?raw=true');
         const laughTex = loader.load('https://raw.githubusercontent.com/sand-yy/sand-yy.github.io/refs/heads/main/laugh.png');
 
-        // Game State
         let score = 0, obstacles = [], particles = [], bossProjectiles = [], speed = 0.35, gameOver = false, isJumping = false, velocityY = 0;
         let bossActive = false, bossObj = null, laughTimer = 0;
         const gravity = -0.016, jumpPower = 0.3, friction = 0.96;
+
+        // Volume adjustment
+        document.getElementById('deathSfx').volume = 0.5;
 
         const keys = { Left: false, Right: false };
         window.addEventListener('keydown', (e) => {
@@ -78,11 +78,9 @@
         });
 
         function spawnExplosion(x, y, z, color = 0x00ff00) {
-            const rows = 4;
-            const size = 1.0 / rows;
             for(let i=0; i<64; i++) {
-                const p = new THREE.Mesh(new THREE.BoxGeometry(size,size,size), new THREE.MeshLambertMaterial({ color: color, emissive: color }));
-                p.position.set(x+(Math.random()-0.5), y+(Math.random()-0.5), z+(Math.random()-0.5));
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.2), new THREE.MeshLambertMaterial({ color: color, emissive: color }));
+                p.position.set(x, y, z);
                 p.userData.velocity = new THREE.Vector3((Math.random()-0.5)*1.2, Math.random()*0.8, (Math.random()-0.5)*1.2);
                 scene.add(p);
                 particles.push(p);
@@ -93,11 +91,8 @@
             bossActive = true;
             document.getElementById('bgm').pause();
             document.getElementById('bossBgm').play();
-            // Clear obstacles
             obstacles.forEach(o => scene.remove(o.mesh));
             obstacles = [];
-            
-            // Spawn Boss PNG
             const spriteMat = new THREE.SpriteMaterial({ map: baseTex });
             bossObj = new THREE.Sprite(spriteMat);
             bossObj.scale.set(6, 6, 1);
@@ -107,21 +102,17 @@
 
         function spawnObstacle() {
             if (gameOver || bossActive) return;
-            const isSpecial = Math.random() < 0.1; // 1 in 10
+            const isSpecial = Math.random() < 0.1;
             const isLong = !isSpecial && Math.random() < 0.4;
             const width = isSpecial ? 2 : (isLong ? 26 : 2);
             
             const mat = new THREE.MeshLambertMaterial({ emissiveIntensity: 2 });
-            if(isSpecial) { 
-                mat.color.set(0xff00ff); mat.emissive.set(0xffff00); // Pink/Yellow gradient feel
-            } else {
-                mat.color.set(isLong ? 0xffaa00 : 0xff0000); mat.emissive.set(mat.color);
-            }
+            if(isSpecial) { mat.color.set(0xff00ff); mat.emissive.set(0xffff00); } 
+            else { mat.color.set(isLong ? 0xffaa00 : 0xff0000); mat.emissive.set(mat.color); }
 
             const group = new THREE.Group();
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, 1, 1), mat);
             group.add(mesh);
-
             const l = new THREE.PointLight(mat.color, isSpecial?60:30, 15);
             group.add(l);
             group.position.set(isLong ? 0 : (Math.random()-0.5)*20, 0.5, -120);
@@ -145,32 +136,37 @@
                     spawnTimer++;
                     if (spawnTimer > 70) { spawnObstacle(); spawnTimer = 0; }
                 } else {
-                    // Boss Movement & Logic
                     bossObj.position.z = player.position.z - 15;
                     bossObj.position.x = Math.sin(Date.now() * 0.002) * 10;
                     bossObj.position.y = 4 + Math.cos(Date.now() * 0.005) * 2;
-                    
                     laughTimer++;
                     if(laughTimer > 120) {
                         bossObj.material.map = laughTex;
                         document.getElementById('laughSfx').play();
-                        // Shoot projectile
                         const proj = new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshLambertMaterial({color:0xff0000, emissive:0xff0000}));
                         proj.position.copy(bossObj.position);
                         const dir = new THREE.Vector3().subVectors(player.position, bossObj.position).normalize();
                         proj.userData.velocity = dir.multiplyScalar(0.5);
                         scene.add(proj);
                         bossProjectiles.push(proj);
-                        
                         setTimeout(() => { if(bossObj) bossObj.material.map = baseTex; }, 500);
                         laughTimer = 0;
                     }
                 }
 
-                // Collision Obstacles
+                // --- FIXED AABB COLLISION ---
                 obstacles.forEach((obj, i) => {
                     obj.mesh.position.z += speed;
-                    if (player.position.distanceTo(obj.mesh.position) < (obj.width/2 + 0.4)) {
+                    
+                    const pX = player.position.x, pY = player.position.y, pZ = player.position.z;
+                    const oX = obj.mesh.position.x, oY = obj.mesh.position.y, oZ = obj.mesh.position.z;
+                    const halfW = obj.width / 2;
+
+                    // Perfect box check: is player within the X, Y, and Z bounds of the bar?
+                    if (pX > oX - halfW - 0.4 && pX < oX + halfW + 0.4 &&
+                        pY < oY + 0.8 &&
+                        pZ > oZ - 0.8 && pZ < oZ + 0.8) {
+                        
                         if(obj.special) {
                             scene.remove(obj.mesh); obstacles.splice(i, 1); triggerBoss();
                         } else {
@@ -180,7 +176,6 @@
                     if (obj.mesh.position.z > 20) { scene.remove(obj.mesh); obstacles.splice(i,1); score++; document.getElementById('ui').innerText = `Score: ${score}`; }
                 });
 
-                // Collision Boss Projectiles
                 bossProjectiles.forEach((p, i) => {
                     p.position.add(p.userData.velocity);
                     if(player.position.distanceTo(p.position) < 1) endGame();
