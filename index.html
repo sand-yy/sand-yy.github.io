@@ -1,363 +1,191 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mini Factory — single-file</title>
-<style>
-:root{--bg:#0f1724;--panel:#0b1220;--accent:#22c55e;--muted:#94a3b8;--card:#0b1320}
-*{box-sizing:border-box;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-html,body{height:100%;margin:0;background:linear-gradient(180deg,#071025 0%, #09121b 100%);color:#e6eef6}
-.container{display:grid;grid-template-columns:320px 1fr;gap:12px;height:100vh;padding:12px}
-.sidebar{background:var(--panel);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:12px}
-.header{display:flex;justify-content:space-between;align-items:center}
-.title{font-weight:700;font-size:18px}
-.hint{font-size:12px;color:var(--muted)}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px}
-.btn{background:linear-gradient(180deg,#0f1724,#07101a);border:1px solid rgba(255,255,255,0.04);padding:8px 10px;border-radius:8px;color:#e6eef6;cursor:pointer}
-.btn.active{outline:2px solid rgba(34,197,94,0.15);box-shadow:0 6px 18px rgba(2,6,23,0.6)}
-.panel{background:linear-gradient(180deg,#071124,#06101a);padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
-.balance{font-size:20px;font-weight:700;color:var(--accent)}
-.canvas-wrap{background:rgba(255,255,255,0.02);border-radius:12px;padding:12px;display:flex;flex-direction:column}
-#gameCanvas{background:linear-gradient(180deg,#021226,#041224);border-radius:8px;width:100%;height:calc(100vh - 120px);display:block}
-.controls{display:flex;gap:8px;align-items:center}
-.legend{display:flex;flex-direction:column;gap:6px}
-.legend-row{display:flex;gap:8px;align-items:center}
-.tile{width:18px;height:18px;border-radius:4px}
-.tile.gen{background:linear-gradient(180deg,#f59e0b,#b45309)}
-.tile.conv{background:linear-gradient(180deg,#0ea5e9,#0369a1)}
-.tile.sell{background:linear-gradient(180deg,#ef4444,#991b1b)}
-.small{font-size:12px;color:var(--muted)}
-.progress{height:10px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden}
-.progress > i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#06b6d4);width:0%}
-.footer{display:flex;justify-content:space-between;align-items:center}
-.instructions{font-size:12px;color:var(--muted)}
-.right-top{display:flex;gap:10px;align-items:center}
-.upgrade{display:flex;flex-direction:column;gap:6px}
-.buy-row{display:flex;justify-content:space-between;align-items:center}
-.price{font-weight:600}
-.small-muted{font-size:12px;color:var(--muted)}
-</style>
+    <meta charset="UTF-8">
+    <title>Pixel Runner - Lighting Fix</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        #crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%);
+            background-size: 100% 4px; pointer-events: none; z-index: 10;
+        }
+        canvas { image-rendering: pixelated; width: 100vw !important; height: 100vh !important; display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #0f0; font-size: 24px; pointer-events: none; z-index: 11; }
+        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+               color: white; text-align: center; display: none; background: #000; padding: 30px; border: 1px solid #0f0; z-index: 12; }
+        button { background: #004400; color: #0f0; border: 1px solid #0f0; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 15px; pointer-events: auto; }
+    </style>
 </head>
 <body>
-<div class="container">
-  <div class="sidebar">
-    <div class="header">
-      <div>
-        <div class="title">Mini Factory</div>
-        <div class="hint">Place generators, conveyors and selling stations</div>
-      </div>
-      <div class="right-top">
-        <div class="small-muted">Money</div>
-        <div class="balance" id="money">$0</div>
-      </div>
+    <div id="crt-overlay"></div>
+    <div id="ui">Score: 0</div>
+    <div id="msg">
+        <h1>SYSTEM OVERLOAD</h1>
+        <button onclick="window.location.href=window.location.href">RE-LINK</button>
     </div>
 
-    <div class="panel">
-      <div class="small-muted">Build tools</div>
-      <div class="toolbar" id="toolBar"></div>
-    </div>
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
 
-    <div class="panel">
-      <div class="small-muted">Buy / Progress</div>
-      <div class="upgrade" id="shop"></div>
-    </div>
+    <script type="module">
+        import * as THREE from 'three';
 
-    <div class="panel">
-      <div class="small-muted">Info</div>
-      <div class="legend">
-        <div class="legend-row"><div class="tile gen"></div> Generator</div>
-        <div class="legend-row"><div class="tile conv"></div> Conveyor (right-click to rotate)</div>
-        <div class="legend-row"><div class="tile sell"></div> Selling station</div>
-      </div>
-    </div>
+        const PIXEL_SCALE = 4;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        document.body.appendChild(renderer.domElement);
 
-    <div style="margin-top:auto">
-      <div class="small-muted">Instructions</div>
-      <div class="instructions">Select a tool, click grid to place. Drag to pan (space + drag). Press R to rotate conveyors while placing. Generators produce items automatically.</div>
-    </div>
-  </div>
+        // Ambient light must be very low to see the point lights
+        const ambient = new THREE.AmbientLight(0xffffff, 0.02); 
+        scene.add(ambient);
 
-  <div class="canvas-wrap">
-    <canvas id="gameCanvas" width="960" height="720"></canvas>
-    <div class="footer">
-      <div class="small-muted" id="status">Grid: 16 x 12</div>
-      <div class="small-muted">Version 1 — single-file</div>
-    </div>
-  </div>
-</div>
+        // Player
+        const player = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 2 })
+        );
+        player.position.y = 0.5;
+        scene.add(player);
 
-<script>
-// === Config ===
-const GRID_COLS = 16;
-const GRID_ROWS = 12;
-const TILE_SIZE = 48; // px
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = GRID_COLS * TILE_SIZE;
-canvas.height = GRID_ROWS * TILE_SIZE;
+        const pLight = new THREE.PointLight(0x00ff00, 20, 15);
+        scene.add(pLight);
 
-// State
-let money = 50;
-let selectedTool = 'cursor'; // cursor, generator, conveyor, seller, erase
-let conveyorDir = 0; // 0:right,1:down,2:left,3:up
-let isPlacing = false;
-let pan = {x:0,y:0};
-let scale = 1;
+        // Floor - Adjusted for better light response
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 2000),
+            new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
 
-const grid = new Array(GRID_ROWS).fill(null).map(()=>new Array(GRID_COLS).fill(null));
-// cell format: {type:'generator'|'conveyor'|'seller', dir:int, data:{...}}
-const items = []; // moving items (products)
+        camera.position.set(0, 4, 8);
+        camera.lookAt(0, 1, 0);
 
-// Shop/upgrades
-const shopData = [
-  {id:'gen_basic',name:'Generator (basic)', price:30, type:'generator', power:1, rate:2, unlocked:true},
-  {id:'conv_basic',name:'Conveyor', price:10, type:'conveyor', unlocked:true},
-  {id:'seller',name:'Selling station', price:20, type:'seller', unlocked:true},
-  {id:'gen_fast',name:'Generator (fast)', price:200, type:'generator', power:2, rate:1.0, unlocked:false},
-  {id:'auto_sell',name:'Auto-seller upgrade', price:500, type:'upgrade', unlocked:false}
-];
+        let score = 0, obstacles = [], particles = [], speed = 0.35, gameOver = false, isJumping = false, velocityY = 0;
+        const gravity = -0.016, jumpPower = 0.3, friction = 0.96;
 
-// UI builder
-const toolBar = document.getElementById('toolBar');
-const shopEl = document.getElementById('shop');
-const moneyEl = document.getElementById('money');
-const statusEl = document.getElementById('status');
+        const keys = { Left: false, Right: false };
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') keys.Left = true;
+            if (e.key === 'ArrowRight') keys.Right = true;
+            if (e.key === 'ArrowUp' && !isJumping && !gameOver) { velocityY = jumpPower; isJumping = true; }
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft') keys.Left = false;
+            if (e.key === 'ArrowRight') keys.Right = false;
+        });
 
-function buildToolbar(){
-  const tools = [
-    {id:'cursor',label:'Cursor'},
-    {id:'generator',label:'Place Generator'},
-    {id:'conveyor',label:'Place Conveyor'},
-    {id:'seller',label:'Place Seller'},
-    {id:'erase',label:'Erase'}
-  ];
-  toolBar.innerHTML='';
-  tools.forEach(t=>{
-    const b = document.createElement('button');
-    b.className='btn'+(selectedTool===t.id?' active':'');
-    b.textContent=t.label;
-    b.onclick=()=>{selectedTool=t.id; updateToolbar();}
-    toolBar.appendChild(b);
-  });
-}
-
-function buildShop(){
-  shopEl.innerHTML='';
-  shopData.forEach(s=>{
-    if(!s.unlocked) return;
-    const row = document.createElement('div');
-    row.className='buy-row';
-    const left = document.createElement('div');
-    left.innerHTML=`<div style="font-weight:700">${s.name}</div><div class="small-muted">Type: ${s.type}</div>`;
-    const right = document.createElement('div');
-    const btn = document.createElement('button');
-    btn.className='btn';
-    btn.textContent=`Buy $${s.price}`;
-    btn.onclick=()=>{ if(money>=s.price){ money -= s.price; moneyEl.textContent = `$${money}`; s.unlocked = true; alert(s.name + ' added to build tools.'); /* placing still via toolbar */ } else { alert('Not enough money'); } };
-    right.appendChild(btn);
-    row.appendChild(left);
-    row.appendChild(right);
-    shopEl.appendChild(row);
-  });
-}
-
-function updateToolbar(){
-  buildToolbar();
-}
-
-buildToolbar();
-buildShop();
-moneyEl.textContent = `$${money}`;
-statusEl.textContent = `Grid: ${GRID_COLS} x ${GRID_ROWS} — Tile: ${TILE_SIZE}px`;
-
-// Helpers
-function gridCoordsFromMouse(e){
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left - pan.x) / scale;
-  const y = (e.clientY - rect.top - pan.y) / scale;
-  const gx = Math.floor(x / TILE_SIZE);
-  const gy = Math.floor(y / TILE_SIZE);
-  return {gx,gy};
-}
-
-function inGrid(gx,gy){ return gx>=0 && gx<GRID_COLS && gy>=0 && gy<GRID_ROWS }
-
-// Placement
-canvas.addEventListener('click', (e)=>{
-  const {gx,gy} = gridCoordsFromMouse(e);
-  if(!inGrid(gx,gy)) return;
-  if(selectedTool==='generator'){
-    const cost = 30;
-    if(money < cost){ flash('Not enough $'); return }
-    if(grid[gy][gx]){ flash('Tile occupied'); return }
-    money -= cost; moneyEl.textContent = `$${money}`;
-    grid[gy][gx]={type:'generator',dir:0,data:{rate:2,timer:0,productPower:1}};
-  } else if(selectedTool==='conveyor'){
-    const cost = 8;
-    if(money < cost){ flash('Not enough $'); return }
-    if(grid[gy][gx]){ flash('Tile occupied'); return }
-    money -= cost; moneyEl.textContent = `$${money}`;
-    grid[gy][gx]={type:'conveyor',dir:conveyorDir,data:{}};
-  } else if(selectedTool==='seller'){
-    const cost = 20;
-    if(money < cost){ flash('Not enough $'); return }
-    if(grid[gy][gx]){ flash('Tile occupied'); return }
-    money -= cost; moneyEl.textContent = `$${money}`;
-    grid[gy][gx]={type:'seller',dir:0,data:{}}
-  } else if(selectedTool==='erase'){
-    if(grid[gy][gx]){ grid[gy][gx] = null }
-  }
-});
-
-// Right click rotate conveyor
-canvas.addEventListener('contextmenu', (e)=>{ e.preventDefault(); const {gx,gy} = gridCoordsFromMouse(e); if(!inGrid(gx,gy)) return; const cell = grid[gy][gx]; if(cell && cell.type==='conveyor'){ cell.dir = (cell.dir+1)%4 } else { conveyorDir = (conveyorDir+1)%4 } });
-
-// Keyboard rotate
-window.addEventListener('keydown', (e)=>{ if(e.key==='r' || e.key==='R'){ conveyorDir=(conveyorDir+1)%4 } if(e.key==='1') selectedTool='cursor'; if(e.key==='2') selectedTool='generator'; if(e.key==='3') selectedTool='conveyor'; if(e.key==='4') selectedTool='seller'; updateToolbar(); });
-
-// Simple pan with space+drag
-let isSpace = false; let dragging=false; let dragStart={x:0,y:0};
-window.addEventListener('keydown', (e)=>{ if(e.code==='Space'){ isSpace=true; canvas.style.cursor='grab'; e.preventDefault(); }});
-window.addEventListener('keyup', (e)=>{ if(e.code==='Space'){ isSpace=false; canvas.style.cursor='default'; dragging=false }});
-canvas.addEventListener('mousedown',(e)=>{ if(isSpace){ dragging=true; dragStart={x:e.clientX - pan.x, y:e.clientY - pan.y} } });
-window.addEventListener('mouseup',()=>{ dragging=false });
-canvas.addEventListener('mousemove',(e)=>{ if(dragging){ pan.x = e.clientX - dragStart.x; pan.y = e.clientY - dragStart.y } });
-
-function flash(msg){ const old = statusEl.textContent; statusEl.textContent = msg; setTimeout(()=>statusEl.textContent = old,1200); }
-
-// Game ticks
-let last = performance.now();
-function gameTick(now){
-  const dt = (now - last) / 1000; last = now;
-  // Generators produce items
-  for(let y=0;y<GRID_ROWS;y++) for(let x=0;x<GRID_COLS;x++){
-    const cell = grid[y][x];
-    if(!cell) continue;
-    if(cell.type==='generator'){
-      cell.data.timer = (cell.data.timer || 0) + dt;
-      if(cell.data.timer >= cell.data.rate){
-        cell.data.timer -= cell.data.rate;
-        // try produce item to adjacent tile in generator dir (we'll prefer right)
-        const targets = [[1,0],[0,1],[-1,0],[0,-1]];
-        let placed=false;
-        for(const t of targets){
-          const nx = x + t[0]; const ny = y + t[1];
-          if(!inGrid(nx,ny)) continue;
-          const dest = grid[ny][nx];
-          // if conveyor or seller or empty but edge, spawn item on that tile
-          items.push({x:x+0.5,y:y+0.5,gridX:nx,gridY:ny,ttl:10,value:1*cell.data.productPower});
-          placed=true; break;
+        function explode(x, y, z) {
+            const rows = 4;
+            const size = 1.0 / rows;
+            for(let ix=0; ix<rows; ix++) {
+                for(let iy=0; iy<rows; iy++) {
+                    for(let iz=0; iz<rows; iz++) {
+                        const p = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00 }));
+                        p.position.set(x + (ix/rows-0.5), y + (iy/rows-0.5), z + (iz/rows-0.5));
+                        p.userData.velocity = new THREE.Vector3((Math.random()-0.5)*0.8, Math.random()*0.6, (Math.random()-0.5)*0.8);
+                        scene.add(p);
+                        particles.push(p);
+                    }
+                }
+            }
         }
-      }
-    }
-  }
-  // Move items along conveyors
-  for(let i=items.length-1;i>=0;i--){
-    const it = items[i];
-    // compute target cell
-    const cx = Math.floor(it.x);
-    const cy = Math.floor(it.y);
-    if(!inGrid(cx,cy)){ items.splice(i,1); continue }
-    const cell = grid[cy][cx];
-    if(cell && cell.type==='conveyor'){
-      // conveyor pushes item in its direction
-      const dir = cell.dir;
-      const speed = 2; // tiles/sec
-      const dx = [1,0,-1,0][dir];
-      const dy = [0,1,0,-1][dir];
-      it.x += dx * speed * dt;
-      it.y += dy * speed * dt;
-    } else if(cell && cell.type==='seller'){
-      // sell item
-      money += Math.max(1, it.value);
-      moneyEl.textContent = `$${Math.floor(money)}`;
-      items.splice(i,1);
-    } else {
-      // drift towards the grid cell center slowly
-      const tx = cx + 0.5; const ty = cy + 0.5;
-      const ax = tx - it.x; const ay = ty - it.y;
-      it.x += ax * Math.min(1,dt*4);
-      it.y += ay * Math.min(1,dt*4);
-      it.ttl -= dt;
-      if(it.ttl <= 0) items.splice(i,1);
-    }
-  }
 
-  // simple unlocking logic
-  if(money >= 200) shopData.find(s=>s.id==='gen_fast').unlocked = true;
-  if(money >= 500) shopData.find(s=>s.id==='auto_sell').unlocked = true;
-  requestAnimationFrame(gameTick);
-}
-requestAnimationFrame(gameTick);
+        function spawnObstacle() {
+            if (gameOver) return;
+            const isLong = Math.random() < 0.4;
+            const width = isLong ? 26 : 2;
+            const color = isLong ? 0xffaa00 : 0xff0000;
+            
+            const group = new THREE.Group();
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(width, 1, 1), 
+                new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 2 })
+            );
+            group.add(mesh);
 
-// Render
-function drawGrid(){
-  ctx.save();
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.translate(pan.x, pan.y);
-  ctx.scale(scale,scale);
+            // Lighting for bars
+            if(isLong) {
+                // Front and Back lights to illuminate the ground
+                const lFront = new THREE.PointLight(color, 40, 15);
+                lFront.position.set(0, 0, 1.5);
+                const lBack = new THREE.PointLight(color, 40, 15);
+                lBack.position.set(0, 0, -1.5);
+                group.add(lFront, lBack);
+            } else {
+                const l = new THREE.PointLight(color, 30, 10);
+                l.position.set(0, 1, 0);
+                group.add(l);
+            }
 
-  // background tiles
-  for(let y=0;y<GRID_ROWS;y++){
-    for(let x=0;x<GRID_COLS;x++){
-      ctx.fillStyle = (x+y)%2===0? '#05111a':'#04101a';
-      ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE,TILE_SIZE-1,TILE_SIZE-1);
-    }
-  }
+            group.position.set(isLong ? 0 : (Math.random()-0.5)*20, 0.5, -120);
+            scene.add(group);
+            obstacles.push({ mesh: group, width: width });
+        }
 
-  // draw conveyors / generators / sellers
-  for(let y=0;y<GRID_ROWS;y++) for(let x=0;x<GRID_COLS;x++){
-    const cell = grid[y][x];
-    const cx = x*TILE_SIZE + TILE_SIZE/2;
-    const cy = y*TILE_SIZE + TILE_SIZE/2;
-    if(!cell) continue;
-    if(cell.type==='conveyor'){
-      // tile base
-      ctx.fillStyle='#0ea5e9';
-      ctx.fillRect(x*TILE_SIZE+6,y*TILE_SIZE+6,TILE_SIZE-12,TILE_SIZE-12);
-      // arrow
-      ctx.save(); ctx.translate(cx,cy);
-      ctx.rotate(cell.dir * Math.PI/2);
-      ctx.fillStyle='#06283a';
-      ctx.beginPath(); ctx.moveTo(-8,-6); ctx.lineTo(8,0); ctx.lineTo(-8,6); ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    if(cell.type==='generator'){
-      ctx.fillStyle='#f59e0b';
-      ctx.beginPath(); ctx.arc(cx,cy, TILE_SIZE/2 -8,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#2b2b2b'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('GEN',cx,cy);
-    }
-    if(cell.type==='seller'){
-      ctx.fillStyle='#ef4444'; ctx.fillRect(x*TILE_SIZE+6,y*TILE_SIZE+6,TILE_SIZE-12,TILE_SIZE-12);
-      ctx.fillStyle='#fff'; ctx.font='12px monospace'; ctx.textAlign='center'; ctx.fillText('SELL',cx,cy);
-    }
-  }
+        let spawnTimer = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!gameOver) {
+                if (keys.Left && player.position.x > -20) player.position.x -= 0.25;
+                if (keys.Right && player.position.x < 20) player.position.x += 0.25;
+                if (isJumping) {
+                    player.position.y += velocityY;
+                    velocityY += gravity;
+                    if (player.position.y <= 0.5) { player.position.y = 0.5; isJumping = false; }
+                }
+                pLight.position.copy(player.position);
+                pLight.position.y += 1; // Raise light slightly for better floor spread
 
-  // draw items
-  for(const it of items){
-    ctx.beginPath();
-    const rx = (it.x - 0) * TILE_SIZE; const ry = (it.y - 0) * TILE_SIZE;
-    ctx.fillStyle = '#ffd166';
-    ctx.arc(rx, ry, TILE_SIZE/6, 0, Math.PI*2);
-    ctx.fill();
-  }
+                spawnTimer++;
+                if (spawnTimer > 70) { spawnObstacle(); spawnTimer = 0; }
 
-  // grid lines
-  ctx.strokeStyle='rgba(255,255,255,0.03)';
-  for(let x=0;x<=GRID_COLS;x++){ ctx.beginPath(); ctx.moveTo(x*TILE_SIZE,0); ctx.lineTo(x*TILE_SIZE,GRID_ROWS*TILE_SIZE); ctx.stroke(); }
-  for(let y=0;y<=GRID_ROWS;y++){ ctx.beginPath(); ctx.moveTo(0,y*TILE_SIZE); ctx.lineTo(GRID_COLS*TILE_SIZE,y*TILE_SIZE); ctx.stroke(); }
+                obstacles.forEach((obj, i) => {
+                    obj.mesh.position.z += speed;
+                    const dx = Math.abs(player.position.x - obj.mesh.position.x);
+                    const dy = Math.abs(player.position.y - obj.mesh.position.y);
+                    const dz = Math.abs(player.position.z - obj.mesh.position.z);
+                    if (dx < (obj.width/2 + 0.4) && dy < 0.8 && dz < 0.8) {
+                        gameOver = true;
+                        explode(player.position.x, player.position.y, player.position.z);
+                        scene.remove(player); 
+                        scene.remove(pLight);
+                        document.getElementById('msg').style.display = 'block';
+                    }
+                    if (obj.mesh.position.z > 20) { 
+                        scene.remove(obj.mesh); 
+                        obstacles.splice(i, 1); 
+                        score++; 
+                        document.getElementById('ui').innerText = `Score: ${score}`; 
+                    }
+                });
+            } else {
+                particles.forEach(p => {
+                    p.position.add(p.userData.velocity);
+                    p.userData.velocity.multiplyScalar(friction);
+                    if (p.position.y > 0.05) { 
+                        p.userData.velocity.y += gravity; 
+                    } else { 
+                        p.position.y = 0.05; 
+                        p.userData.velocity.y *= -0.4; // Bounce
+                        p.userData.velocity.x *= 0.7;
+                        p.userData.velocity.z *= 0.7;
+                    }
+                });
+            }
+            renderer.render(scene, camera);
+        }
 
-  ctx.restore();
-}
-
-function loop(){ drawGrid(); requestAnimationFrame(loop); }
-loop();
-
-// Simple save/load to localStorage
-window.addEventListener('keydown',(e)=>{ if(e.ctrlKey && e.key==='s'){ e.preventDefault(); const save = {grid, money, items}; localStorage.setItem('mini_factory_save', JSON.stringify(save)); flash('Saved'); } if(e.ctrlKey && e.key==='l'){ e.preventDefault(); const s = localStorage.getItem('mini_factory_save'); if(s){ const parsed = JSON.parse(s); // naive restore
-  for(let y=0;y<GRID_ROWS;y++) for(let x=0;x<GRID_COLS;x++) grid[y][x] = parsed.grid?.[y]?.[x] ?? null; money = parsed.money ?? money; moneyEl.textContent=`$${money}`; items.length=0; (parsed.items||[]).forEach(it=>items.push(it)); flash('Loaded'); } } });
-
-</script>
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth / PIXEL_SCALE, window.innerHeight / PIXEL_SCALE, false);
+        }
+        window.addEventListener('resize', onResize);
+        onResize(); animate();
+    </script>
 </body>
 </html>
