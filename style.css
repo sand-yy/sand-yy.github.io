@@ -1,6 +1,11 @@
 body {
-    background-color: #ffffff;
+    background: linear-gradient(#e0e0e0, #fff, #e0e0e0);
+    background-repeat: initial;
     text-align: center;
+    min-height: 100%;
+}
+html {
+    min-height: 100%; /* I don't know why this works. But it does. It's also the only way for it to work.*/
 }
 .text {
     font-family: "Arial", sans-serif;
@@ -18,7 +23,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .middleButton {
     padding: 7mm;
@@ -28,7 +33,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .rightButton {
     padding: 7mm;
@@ -40,7 +45,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .fullButton {
     padding: 7mm;
@@ -51,7 +56,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .headingImg {
     width: 100%;
@@ -112,7 +117,7 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .menubarbuttonmiddle {
     justify-content: center;
@@ -126,7 +131,7 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 .menubarbuttonright {
     max-width: 5cm;
@@ -142,7 +147,8 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
-  transition: transform 0.1s ease-in-out;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
 }
 .customemoji {
     width: 7mm;
@@ -174,23 +180,23 @@ input {
   transform: scale(1.1);
 }
 .middleButton:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .rightButton:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .leftButton:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .fullButton:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .menubarbuttonleft:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .menubarbuttonright:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
 .menubarbuttonmiddle:active {
-  transform: scale(0.9);
+  transform: scale(0.9) rotate(-2deg);
 }
