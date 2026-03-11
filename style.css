@@ -99,6 +99,7 @@ input {
   flex-wrap: nowrap; /* Prevents stacking */
 }
 .menubarbuttonleft {
+    justify-content: center;
     max-width: 5cm;
   flex: 1 1 auto; /* Allows shrinking and growing */
   min-width: 0; /* Important: Allows element to shrink below its content size */
@@ -114,6 +115,7 @@ input {
   transition: transform 0.1s ease-in-out;
 }
 .menubarbuttonmiddle {
+    justify-content: center;
     max-width: 5cm;
   flex: 1 1 auto; /* Allows shrinking and growing */
   min-width: 0; /* Important: Allows element to shrink below its content size */
@@ -128,6 +130,7 @@ input {
 }
 .menubarbuttonright {
     max-width: 5cm;
+    justify-content: center;
   flex: 1 1 auto; /* Allows shrinking and growing */
   min-width: 0; /* Important: Allows element to shrink below its content size */
     padding: 7mm;
@@ -141,6 +144,11 @@ input {
     color: #333333;
   transition: transform 0.1s ease-in-out;
 }
+.customemoji {
+    width: 7mm;
+    height: 7mm;
+}
+
 
 .middleButton:hover {
   transform: scale(1.1);
