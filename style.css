@@ -147,6 +147,8 @@ input {
 .customemoji {
     width: 7mm;
     height: 7mm;
+    padding-left: 3%;
+    padding-right: 3%;
 }
 
 
