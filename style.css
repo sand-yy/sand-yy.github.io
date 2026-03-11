@@ -18,6 +18,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .middleButton {
     padding: 7mm;
@@ -27,6 +28,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .rightButton {
     padding: 7mm;
@@ -38,6 +40,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .fullButton {
     padding: 7mm;
@@ -48,6 +51,7 @@ body {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .headingImg {
     width: 100%;
@@ -107,6 +111,7 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .menubarbuttonmiddle {
     max-width: 5cm;
@@ -119,6 +124,7 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
 }
 .menubarbuttonright {
     max-width: 5cm;
@@ -133,4 +139,48 @@ input {
     text-shadow: 0.5mm;
     font-size: 5mm;
     color: #333333;
+  transition: transform 0.1s ease-in-out;
+}
+
+.middleButton:hover {
+  transform: scale(1.05);
+}
+.rightButton:hover {
+  transform: scale(1.05);
+}
+.leftButton:hover {
+  transform: scale(1.05);
+}
+.fullButton:hover {
+  transform: scale(1.05);
+}
+.menubarbuttonleft:hover {
+  transform: scale(1.05);
+}
+.menubarbuttonright:hover {
+  transform: scale(1.05);
+}
+.menubarbuttonmiddle:hover {
+  transform: scale(1.05);
+}
+.middleButton:active {
+  transform: scale(0.9);
+}
+.rightButton:active {
+  transform: scale(0.9);
+}
+.leftButton:active {
+  transform: scale(0.9);
+}
+.fullButton:active {
+  transform: scale(0.9);
+}
+.menubarbuttonleft:active {
+  transform: scale(0.9);
+}
+.menubarbuttonright:active {
+  transform: scale(0.9);
+}
+.menubarbuttonmiddle:active {
+  transform: scale(0.9);
 }
