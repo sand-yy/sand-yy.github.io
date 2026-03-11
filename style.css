@@ -1,0 +1,136 @@
+body {
+    background-color: #ffffff;
+    text-align: center;
+}
+.text {
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 7mm;
+    color: #333333;
+}
+.leftButton {
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    border-top-left-radius: 5mm;
+    border-bottom-left-radius: 5mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.middleButton {
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.rightButton {
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    border-top-right-radius: 5mm;
+    border-bottom-right-radius: 5mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.fullButton {
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    border-radius: 5mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.headingImg {
+    width: 100%;
+    max-width: 50vw;
+    height: auto;
+    image-rendering: pixelated;
+}
+iframe {
+    width: 95vw;
+    height: 90vh;
+}
+h1 {
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 1.5cm;
+    color: #333333;
+}
+input {
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 7mm;
+    color: #333333;
+    display: block;
+    width: 30vw;
+    aspect-ratio: 5 / 1;
+    margin: 0 auto 1em;
+    border-radius: 5mm;
+}
+.topbar {
+    width: 100%;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 7mm;
+    text-align: center;
+    color: #ffffff;
+    height: 1cm;
+    background-color: rgb(0, 0, 0);
+    position: fixed
+}
+.menubar {
+  display: flex;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap; /* Prevents stacking */
+}
+.menubarbuttonleft {
+    max-width: 5cm;
+  flex: 1 1 auto; /* Allows shrinking and growing */
+  min-width: 0; /* Important: Allows element to shrink below its content size */
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    border-top-left-radius: 5mm;
+    border-bottom-left-radius: 5mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.menubarbuttonmiddle {
+    max-width: 5cm;
+  flex: 1 1 auto; /* Allows shrinking and growing */
+  min-width: 0; /* Important: Allows element to shrink below its content size */
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
+.menubarbuttonright {
+    max-width: 5cm;
+  flex: 1 1 auto; /* Allows shrinking and growing */
+  min-width: 0; /* Important: Allows element to shrink below its content size */
+    padding: 7mm;
+    border-color: #e0e0e0;
+    border-width: 1mm;
+    border-top-right-radius: 5mm;
+    border-bottom-right-radius: 5mm;
+    font-family: "Arial", sans-serif;
+    text-shadow: 0.5mm;
+    font-size: 5mm;
+    color: #333333;
+}
