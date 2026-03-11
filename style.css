@@ -143,25 +143,25 @@ input {
 }
 
 .middleButton:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .rightButton:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .leftButton:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .fullButton:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .menubarbuttonleft:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .menubarbuttonright:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .menubarbuttonmiddle:hover {
-  transform: scale(1.05);
+  transform: scale(1.1);
 }
 .middleButton:active {
   transform: scale(0.9);
