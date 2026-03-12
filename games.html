@@ -10,6 +10,8 @@
         <p class="text">
             welcome to games!!!
         </p>
+        <button class="fullButton" id="shareLinkButton">Copy Share Link</button>
+        <div class="divider"></div>
         <div>
             <img src="./Resources/Images/Controller.png" class="customemoji">
             <img src="./Resources/Images/House.png" class="customemoji">
@@ -30,6 +32,7 @@
             <b>NEWS:<br>
             None so far.<br></b>
         </p>
+        <div class="divider"></div>
         <h1>Google Doodles</h1>
         <button title="Solitaire, a beloved card game." class="fullButton" onclick="location.href='./GameFiles/Solitaire/base.html'">Solitaire</button>
         <button title="Snake." class="fullButton" onclick="location.href='./GameFiles/Snake/base.html'">Snake</button>
@@ -43,5 +46,17 @@
         import { springyEmojiCursor } from "https://unpkg.com/cursor-effects@latest/dist/esm.js";
 
         new springyEmojiCursor({ emoji: "🅱️" });
+    </script>
+    <script>
+        document.getElementById('shareLinkButton').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+    
+                alert('Link copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy link, ', err);
+            }
+        });
     </script>
 </html>

@@ -7,6 +7,13 @@ body {
 html {
     min-height: 100%; /* I don't know why this works. But it does. It's also the only way for it to work.*/
 }
+.divider {
+  max-height: 2px;
+  min-height: 2px;
+  height: 2px;
+  background-color: #bdbdbd;
+  margin: 5mm;
+}
 .text {
     font-family: "Arial", sans-serif;
     text-shadow: 0.5mm;

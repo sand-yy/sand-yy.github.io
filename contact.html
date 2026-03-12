@@ -7,9 +7,12 @@
     </head>
     <body>
         <img class="headingImg" src="./Resources/Images/heading.gif">
+        <div class="divider"></div>
         <p class="text">
             welcome to contact page!!!
         </p>
+        <button class="fullButton" id="shareLinkButton">Copy Share Link</button>
+        <div class="divider"></div>
         <div>
             <img src="./Resources/Images/Controller.png" class="customemoji">
             <img src="./Resources/Images/House.png" class="customemoji">
@@ -29,6 +32,7 @@
             My email: sand@sandysite.github.io<br>
             <br>
         </p>
+        <div class="divider"></div>
         <h1>To use this system below, you need to have discord unblocked, because it sends it directly to my discord. Use a VPN, or home/other network.</h1>
         <input class="text" type="text" placeholder="Name here:" id="nameinp">
         <input class="text" type="text" placeholder="Email here:" id="eminp">
@@ -42,5 +46,17 @@
         import { springyEmojiCursor } from "https://unpkg.com/cursor-effects@latest/dist/esm.js";
 
         new springyEmojiCursor({ emoji: "🅱️" });
+    </script>
+    <script>
+        document.getElementById('shareLinkButton').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+    
+                alert('Link copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy link, ', err);
+            }
+        });
     </script>
 </html>

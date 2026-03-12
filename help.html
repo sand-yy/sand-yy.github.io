@@ -7,9 +7,12 @@
     </head>
     <body>
         <img class="headingImg" src="./Resources/Images/heading.gif">
+        <div class="divider"></div>
         <p class="text">
             welcome to study help!!!
         </p>
+        <button class="fullButton" id="shareLinkButton">Copy Share Link</button>
+        <div class="divider"></div>
         <div>
             <img src="./Resources/Images/Controller.png" class="customemoji">
             <img src="./Resources/Images/House.png" class="customemoji">
@@ -26,11 +29,24 @@
             Here you can learn some strategies for some subjects that may or may not be helpful.<br>
             If you wish for anything to be added, please contact me at the Contact Page.<br>
         </p>
+        <div class="divider"></div>
         <button class="fullButton" onclick="location.href='./Subpages/mathhelp.html'" title="Get some help in maths.">Mathematics</button>
     </body>
     <script type="module">
         import { springyEmojiCursor } from "https://unpkg.com/cursor-effects@latest/dist/esm.js";
 
         new springyEmojiCursor({ emoji: "🅱️" });
+    </script>
+    <script>
+        document.getElementById('shareLinkButton').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(window.location.href);
+    
+                alert('Link copied to clipboard!');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy link, ', err);
+            }
+        });
     </script>
 </html>
